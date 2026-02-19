@@ -134,3 +134,48 @@ elif "RISK ON" in market and excess_liq > 20000:
     st.success("Focus: Sell premium on strongest stocks")
 else:
     st.info("Focus: Patience — wait for best setups")
+
+# =========================
+# TRADE RANKING SCANNER
+# =========================
+st.header("Trade Ranking Scanner")
+
+st.write("Enter market feel for key stocks (quick daily scan)")
+
+colA, colB, colC = st.columns(3)
+
+with colA:
+    tsla = st.selectbox("TSLA", ["strong", "neutral", "weak"])
+    coin = st.selectbox("COIN", ["strong", "neutral", "weak"])
+    nvda = st.selectbox("NVDA", ["strong", "neutral", "weak"])
+
+with colB:
+    mu = st.selectbox("MU", ["strong", "neutral", "weak"])
+    amzn = st.selectbox("AMZN", ["strong", "neutral", "weak"])
+    rklb = st.selectbox("RKLB", ["strong", "neutral", "weak"])
+
+with colC:
+    googl = st.selectbox("GOOGL", ["strong", "neutral", "weak"])
+    sofi = st.selectbox("SOFI", ["strong", "neutral", "weak"])
+    pltr = st.selectbox("PLTR", ["strong", "neutral", "weak"])
+
+st.subheader("Scanner Result")
+
+candidates = []
+
+if tsla == "strong": candidates.append("TSLA sell puts")
+if coin == "strong": candidates.append("COIN sell puts")
+if nvda == "strong": candidates.append("NVDA sell puts")
+if mu == "strong": candidates.append("MU sell puts")
+if amzn == "strong": candidates.append("AMZN sell puts")
+if rklb == "strong": candidates.append("RKLB sell puts")
+if googl == "strong": candidates.append("GOOGL sell puts")
+if sofi == "strong": candidates.append("SOFI sell puts")
+if pltr == "strong": candidates.append("PLTR sell puts")
+
+if len(candidates) == 0:
+    st.info("No strong setups today — patience")
+else:
+    st.success("Top Put Candidates:")
+    for c in candidates[:3]:
+        st.write("•", c)
