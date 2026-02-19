@@ -183,12 +183,16 @@ results = {}
 
 for name, ticker in tickers.items():
     results[name] = get_price(ticker)
-df = pd.DataFrame(
-    [(k, v) for k, v in results.items() if v is not None],
-    columns=["Theme", "% Move Today"]
-)
+clean_data = []
 
-df = df.sort_values("% Move Today", ascending=False)
+for k, v in results.items():
+    if isinstance(v, (int, float)):
+        clean_data.append((k, float(v)))
+
+df = pd.DataFrame(clean_data, columns=["Theme", "% Move Today"])
+
+if not df.empty:
+    df = df.sort_values("% Move Today", ascending=False)
 
 st.subheader("Strongest Themes Today")
 st.dataframe(df.head(8), use_container_width=True)
