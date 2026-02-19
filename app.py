@@ -143,17 +143,24 @@ else:
 # =========================
 st.header("Live Market Intelligence")
 
+import requests
+
 @st.cache_data(ttl=300)
 def get_price(symbol):
     try:
-        data = yf.download(symbol, period="5d", interval="1d", progress=False)
-        data = data.dropna()
-        if len(data) < 2:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+
+        closes = data["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+        closes = [c for c in closes if c is not None]
+
+        if len(closes) < 2:
             return None
-        last = data["Close"].iloc[-1]
-        prev = data["Close"].iloc[-2]
-        pct = ((last - prev) / prev) * 100
+
+        pct = ((closes[-1] - closes[-2]) / closes[-2]) * 100
         return round(pct, 2)
+
     except:
         return None
 
