@@ -1,4 +1,6 @@
 import streamlit as st
+import yfinance as yf
+import pandas as pd
 
 st.set_page_config(page_title="Alpha Lady Pro", layout="wide")
 
@@ -179,3 +181,67 @@ else:
     st.success("Top Put Candidates:")
     for c in candidates[:3]:
         st.write("•", c)
+# =========================
+# LIVE MACRO & THEME ENGINE
+# =========================
+st.header("Live Market Intelligence")
+
+@st.cache_data(ttl=300)
+def get_price(symbol):
+    data = yf.download(symbol, period="5d", interval="1d", progress=False)
+    if len(data) < 2:
+        return 0
+    return round(((data["Close"][-1] / data["Close"][-2]) - 1) * 100, 2)
+
+# Core macro tickers
+tickers = {
+    "QQQ (Growth)": "QQQ",
+    "SPY (Market)": "SPY",
+    "IWM (Small caps)": "IWM",
+    "VIX": "^VIX",
+    "Bonds TLT": "TLT",
+    "Dollar DXY": "DX-Y.NYB",
+    "Oil": "CL=F",
+    "Gold": "GC=F",
+    "Copper": "HG=F",
+    "Semis SMH": "SMH",
+    "Financials": "XLF",
+    "Energy": "XLE",
+    "Healthcare": "XLV",
+    "REITs": "XLRE",
+    "Staples": "XLP",
+    "Discretionary": "XLY",
+    "Industrials": "XLI",
+    "Materials": "XLB"
+}
+
+results = {}
+
+for name, ticker in tickers.items():
+    try:
+        results[name] = get_price(ticker)
+    except:
+        results[name] = 0
+
+df = pd.DataFrame(list(results.items()), columns=["Theme", "% Move Today"])
+df = df.sort_values("% Move Today", ascending=False)
+
+st.subheader("Strongest Themes Today")
+st.dataframe(df.head(8), use_container_width=True)
+
+st.subheader("Weakest Themes Today")
+st.dataframe(df.tail(8), use_container_width=True)
+
+# Risk regime logic
+qqq_move = results.get("QQQ (Growth)",0)
+vix_move = results.get("VIX",0)
+
+if qqq_move > 0.4 and vix_move < 0:
+    regime = "🟢 Risk-on"
+elif qqq_move < -0.4 and vix_move > 0:
+    regime = "🔴 Risk-off"
+else:
+    regime = "🟡 Mixed/Neutral"
+
+st.subheader("Market Regime")
+st.write(regime)
