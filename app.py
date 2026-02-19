@@ -42,6 +42,25 @@ with c4:
 
 
 total_positions = short_puts + covered_calls + long_calls + shares + hedges
+# =========================
+# POSITION LOAD SCORING
+# =========================
+st.header("Position Load Score")
+
+# weighted exposure (puts heavier risk)
+load_score = (short_puts * 2) + covered_calls + long_calls + shares + (hedges * 0.5)
+
+if load_score < 15:
+    load_status = "🟢 LIGHT — capacity to add trades"
+elif load_score < 30:
+    load_status = "🟡 BALANCED — add selectively"
+elif load_score < 45:
+    load_status = "🔴 HEAVY — only best setups"
+else:
+    load_status = "⛔ OVERLOADED — no new trades"
+
+st.subheader(load_status)
+st.write(f"Load Score: {load_score}")
 
 
 
