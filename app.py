@@ -145,10 +145,17 @@ st.header("Live Market Intelligence")
 
 @st.cache_data(ttl=300)
 def get_price(symbol):
-    data = yf.download(symbol, period="5d", interval="1d", progress=False)
-    if len(data) < 2:
-        return 0
-    return round(((data["Close"][-1] / data["Close"][-2]) - 1) * 100, 2)
+    try:
+        data = yf.download(symbol, period="5d", interval="1d", progress=False)
+        data = data.dropna()
+        if len(data) < 2:
+            return None
+        last = data["Close"].iloc[-1]
+        prev = data["Close"].iloc[-2]
+        pct = ((last - prev) / prev) * 100
+        return round(pct, 2)
+    except:
+        return None
 
 # Core macro tickers
 tickers = {
@@ -175,12 +182,12 @@ tickers = {
 results = {}
 
 for name, ticker in tickers.items():
-    try:
-        results[name] = get_price(ticker)
-    except:
-        results[name] = 0
+    results[name] = get_price(ticker)
+df = pd.DataFrame(
+    [(k, v) for k, v in results.items() if v is not None],
+    columns=["Theme", "% Move Today"]
+)
 
-df = pd.DataFrame(list(results.items()), columns=["Theme", "% Move Today"])
 df = df.sort_values("% Move Today", ascending=False)
 
 st.subheader("Strongest Themes Today")
