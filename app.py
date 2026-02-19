@@ -1,63 +1,94 @@
 import streamlit as st
 
-st.set_page_config(page_title="Alpha Lady", layout="wide")
+st.set_page_config(page_title="Alpha Lady Pro", layout="wide")
 
-st.title("💎 Alpha Lady Trading Dashboard")
+st.title("💎 Alpha Lady — Pro Trading Cockpit")
 
-st.markdown("### Account Overview")
+# =========================
+# ACCOUNT CORE
+# =========================
+st.header("Account Overview")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    net_liq = st.number_input("Net Liquidation Value", value=49000)
+    net_liq = st.number_input("Net Liquidation ($)", value=49000)
 
 with col2:
-    excess_liq = st.number_input("Excess Liquidity", value=26000)
+    excess_liq = st.number_input("Excess Liquidity ($)", value=26000)
 
 with col3:
-    positions = st.number_input("Open Positions", value=12)
+    cash = st.number_input("Cash Available ($)", value=0)
 
-st.markdown("---")
+# =========================
+# PORTFOLIO STRUCTURE
+# =========================
+st.header("Portfolio Structure")
 
-# Risk Engine
-if excess_liq > 22000:
-    risk_status = "🟢 SAFE"
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    short_puts = st.number_input("Short Puts (contracts)", value=0)
+
+with c2:
+    covered_calls = st.number_input("Covered Calls", value=0)
+
+with c3:
+    long_calls = st.number_input("Long Calls", value=0)
+
+with c4:
+    shares = st.number_input("Stock Positions", value=0)
+
+total_positions = short_puts + covered_calls + long_calls + shares
+
+# =========================
+# RISK ENGINE
+# =========================
+st.header("Risk Engine")
+
+if excess_liq > 25000:
+    risk = "🟢 SAFE — capacity to trade"
 elif excess_liq > 15000:
-    risk_status = "🟡 FULL"
+    risk = "🟡 FULL — trade selectively"
 else:
-    risk_status = "🔴 REDUCE RISK"
+    risk = "🔴 DEFENSIVE — reduce risk"
 
-st.subheader("Risk Status")
-st.write(risk_status)
+st.subheader(risk)
 
-st.markdown("---")
+if total_positions > 20:
+    st.warning("⚠️ Large number of positions — avoid adding more")
+elif total_positions < 8:
+    st.success("Good capacity for income trades")
 
-st.markdown("### Market Conditions")
+# =========================
+# MARKET MODE
+# =========================
+st.header("Market Mode")
 
-col4, col5, col6 = st.columns(3)
+m1, m2, m3 = st.columns(3)
 
-with col4:
-    qqq = st.selectbox("QQQ Today", ["green", "red"])
+with m1:
+    qqq = st.selectbox("QQQ", ["green", "red"])
 
-with col5:
-    vix = st.selectbox("VIX Trend", ["up", "down"])
+with m2:
+    vix = st.selectbox("VIX", ["falling", "rising"])
 
-with col6:
-    smh = st.selectbox("Semis (SMH)", ["green", "red"])
+with m3:
+    semis = st.selectbox("Semiconductors (SMH)", ["green", "red"])
 
-if qqq == "green" and smh == "green" and vix == "down":
-    market_signal = "🟢 RISK ON – Sell Puts"
-elif qqq == "red" and vix == "up":
-    market_signal = "🔴 RISK OFF – Hedge or Sell Calls"
+if qqq == "green" and semis == "green" and vix == "falling":
+    market = "🟢 RISK ON — Sell puts"
+elif qqq == "red" and vix == "rising":
+    market = "🔴 RISK OFF — Hedge / sell calls"
 else:
-    market_signal = "🟡 NEUTRAL – Selective Trades"
+    market = "🟡 NEUTRAL — selective trades"
 
-st.subheader("Market Signal")
-st.write(market_signal)
+st.subheader(market)
 
-st.markdown("---")
-
-st.markdown("### Weekly Income Tracker")
+# =========================
+# INCOME TRACKER
+# =========================
+st.header("Income Tracker")
 
 target = 500
 col7, col8 = st.columns(2)
@@ -67,9 +98,16 @@ with col7:
 
 with col8:
     remaining = target - collected
-    st.metric("Remaining to Target ($500)", remaining)
+    st.metric("Remaining to Weekly Target ($500)", remaining)
 
-st.markdown("---")
+# =========================
+# TRADE SIGNAL BOX
+# =========================
+st.header("Today's Trade Focus")
 
-st.markdown("### Today's Action")
-st.info("Wait for high-quality setup. Only trade when system aligns.")
+if risk.startswith("🔴"):
+    st.error("Focus: Reduce risk / hedge")
+elif "RISK ON" in market and excess_liq > 20000:
+    st.success("Focus: Sell premium on strongest stocks")
+else:
+    st.info("Focus: Patience — wait for best setups")
