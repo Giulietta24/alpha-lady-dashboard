@@ -201,15 +201,18 @@ st.subheader("Weakest Themes Today")
 st.dataframe(df.tail(8), use_container_width=True)
 
 # Risk regime logic
-qqq_move = results.get("QQQ (Growth)",0)
-vix_move = results.get("VIX",0)
+qqq_move = results.get("QQQ (Growth)")
+vix_move = results.get("VIX")
 
-if qqq_move > 0.4 and vix_move < 0:
-    regime = "🟢 Risk-on"
-elif qqq_move < -0.4 and vix_move > 0:
-    regime = "🔴 Risk-off"
+if isinstance(qqq_move, (int, float)) and isinstance(vix_move, (int, float)):
+    if qqq_move > 0.4 and vix_move < 0:
+        regime = "🟢 Risk-on"
+    elif qqq_move < -0.4 and vix_move > 0:
+        regime = "🔴 Risk-off"
+    else:
+        regime = "🟡 Mixed/Neutral"
 else:
-    regime = "🟡 Mixed/Neutral"
+    regime = "Waiting for market data..."
 
 st.subheader("Market Regime")
 st.write(regime)
