@@ -38,8 +38,12 @@ with c3:
 
 with c4:
     shares = st.number_input("Stock Positions", value=0)
+    hedges = st.number_input("Hedge Positions", value=0)
 
-total_positions = short_puts + covered_calls + long_calls + shares
+
+total_positions = short_puts + covered_calls + long_calls + shares + hedges
+
+
 
 # =========================
 # RISK ENGINE
