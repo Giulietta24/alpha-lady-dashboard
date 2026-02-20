@@ -107,15 +107,30 @@ if time.time() - st.session_state.last_refresh > 60:
 # -----------------------------
 @st.cache_data(ttl=60)
 def get_market_data():
-    qqq = yf.download("QQQ", period="5d", interval="15m")
-    vix = yf.download("^VIX", period="5d", interval="15m")
-    smh = yf.download("SMH", period="5d", interval="15m")
-    return qqq, vix, smh
+    try:
+        qqq = yf.download("QQQ", period="5d", interval="15m", progress=False)
+        vix = yf.download("^VIX", period="5d", interval="15m", progress=False)
+        smh = yf.download("SMH", period="5d", interval="15m", progress=False)
+        return qqq, vix, smh
+    except:
+        return None, None, None
 
 qqq, vix, smh = get_market_data()
 
 def trend_up(data):
-    return data["Close"].iloc[-1] > data["Close"].iloc[-10]
+    if data is None or len(data) < 15:
+        return False
+    return float(data["Close"].iloc[-1]) > float(data["Close"].iloc[-5])
+
+def trend_down(data):
+    if data is None or len(data) < 15:
+        return False
+    return float(data["Close"].iloc[-1]) < float(data["Close"].iloc[-5])
+
+def trend_down(data):
+    if data is None or len(data) < 15:
+        return False
+    return float(data["Close"].iloc[-1]) < float(data["Close"].iloc[-5])
 
 def trend_down(data):
     return data["Close"].iloc[-1] < data["Close"].iloc[-10]
