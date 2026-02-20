@@ -235,7 +235,7 @@ st.header("Today's Trade Focus")
 
 if risk.startswith("🔴"):
     st.error("Focus: Reduce risk / hedge")
-elif "RISK ON" in market and excess_liq > 20000:
+elif regime == "INCOME MODE" and excess_liq > 20000:
     st.success("Focus: Sell premium on strongest stocks")
 else:
     st.info("Focus: Patience — wait for best setups")
