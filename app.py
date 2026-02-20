@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import requests
 
 st.set_page_config(page_title="Alpha Lady Pro", layout="wide")
 
@@ -137,89 +138,68 @@ elif "RISK ON" in market and excess_liq > 20000:
 else:
     st.info("Focus: Patience — wait for best setups")
 
-
 # =========================
-# LIVE MACRO & THEME ENGINE
+# LIVE MARKET INTELLIGENCE (FINNHUB)
 # =========================
 st.header("Live Market Intelligence")
 
-import requests
+API_KEY = "d6bqqlpr01qp4li0gq5gd6bqqlpr01qp4li0gq60"
 
-@st.cache_data(ttl=300)
 def get_price(symbol):
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+        url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={API_KEY}"
         r = requests.get(url, timeout=10)
         data = r.json()
-
-        closes = data["chart"]["result"][0]["indicators"]["quote"][0]["close"]
-        closes = [c for c in closes if c is not None]
-
-        if len(closes) < 2:
-            return None
-
-        pct = ((closes[-1] - closes[-2]) / closes[-2]) * 100
-        return round(pct, 2)
-
+        if "dp" in data and data["dp"] is not None:
+            return round(data["dp"], 2)
+        return None
     except:
         return None
 
-# Core macro tickers
 tickers = {
-    "QQQ (Growth)": "QQQ",
-    "SPY (Market)": "SPY",
-    "IWM (Small caps)": "IWM",
-    "VIX": "^VIX",
-    "Bonds TLT": "TLT",
-    "Dollar DXY": "DX-Y.NYB",
-    "Oil": "CL=F",
-    "Gold": "GC=F",
-    "Copper": "HG=F",
-    "Semis SMH": "SMH",
+    "S&P 500": "SPY",
+    "Nasdaq": "QQQ",
+    "Small Caps": "IWM",
+    "Semis": "SMH",
     "Financials": "XLF",
     "Energy": "XLE",
     "Healthcare": "XLV",
     "REITs": "XLRE",
-    "Staples": "XLP",
     "Discretionary": "XLY",
+    "Staples": "XLP",
     "Industrials": "XLI",
     "Materials": "XLB"
 }
 
 results = {}
-
 for name, ticker in tickers.items():
     results[name] = get_price(ticker)
-clean_data = []
 
-for k, v in results.items():
-    if isinstance(v, (int, float)):
-        clean_data.append((k, float(v)))
-
-df = pd.DataFrame(clean_data, columns=["Theme", "% Move Today"])
+data_rows = [(k, v) for k, v in results.items() if isinstance(v, (int, float))]
+df = pd.DataFrame(data_rows, columns=["Theme", "% Move Today"])
 
 if not df.empty:
     df = df.sort_values("% Move Today", ascending=False)
 
 st.subheader("Strongest Themes Today")
-st.dataframe(df.head(8), use_container_width=True)
+st.dataframe(df.head(6), use_container_width=True)
 
 st.subheader("Weakest Themes Today")
-st.dataframe(df.tail(8), use_container_width=True)
+st.dataframe(df.tail(6), use_container_width=True)
 
-# Risk regime logic
-qqq_move = results.get("QQQ (Growth)")
-vix_move = results.get("VIX")
+# Market regime
+qqq_move = results.get("Nasdaq")
+spy_move = results.get("S&P 500")
 
-if isinstance(qqq_move, (int, float)) and isinstance(vix_move, (int, float)):
-    if qqq_move > 0.4 and vix_move < 0:
-        regime = "🟢 Risk-on"
-    elif qqq_move < -0.4 and vix_move > 0:
-        regime = "🔴 Risk-off"
+if isinstance(qqq_move, (int, float)) and isinstance(spy_move, (int, float)):
+    if qqq_move > 0.5 and spy_move > 0:
+        regime = "🟢 Risk-On"
+    elif qqq_move < -0.5:
+        regime = "🔴 Risk-Off"
     else:
-        regime = "🟡 Mixed/Neutral"
+        regime = "🟡 Mixed"
 else:
-    regime = "Waiting for market data..."
+    regime = "Loading..."
 
 st.subheader("Market Regime")
 st.write(regime)
