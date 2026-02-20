@@ -86,31 +86,113 @@ if total_positions > 20:
 elif total_positions < 8:
     st.success("Good capacity for income trades")
 
-# =========================
-# MARKET MODE
-# =========================
-st.header("Market Mode")
+import streamlit as st
+import yfinance as yf
+import time
 
-m1, m2, m3 = st.columns(3)
+st.set_page_config(layout="wide")
 
-with m1:
-    qqq = st.selectbox("QQQ", ["green", "red"])
+# -----------------------------
+# AUTO REFRESH EVERY 60 SECONDS
+# -----------------------------
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
-with m2:
-    vix = st.selectbox("VIX", ["falling", "rising"])
+if time.time() - st.session_state.last_refresh > 60:
+    st.session_state.last_refresh = time.time()
+    st.rerun()
 
-with m3:
-    semis = st.selectbox("Semiconductors (SMH)", ["green", "red"])
+# -----------------------------
+# MARKET DATA
+# -----------------------------
+@st.cache_data(ttl=60)
+def get_market_data():
+    qqq = yf.download("QQQ", period="5d", interval="15m")
+    vix = yf.download("^VIX", period="5d", interval="15m")
+    smh = yf.download("SMH", period="5d", interval="15m")
+    return qqq, vix, smh
 
-if qqq == "green" and semis == "green" and vix == "falling":
-    market = "🟢 RISK ON — Sell puts"
-elif qqq == "red" and vix == "rising":
-    market = "🔴 RISK OFF — Hedge / sell calls"
+qqq, vix, smh = get_market_data()
+
+def trend_up(data):
+    return data["Close"].iloc[-1] > data["Close"].iloc[-10]
+
+def trend_down(data):
+    return data["Close"].iloc[-1] < data["Close"].iloc[-10]
+
+qqq_up = trend_up(qqq)
+vix_up = trend_up(vix)
+smh_up = trend_up(smh)
+
+vix_level = vix["Close"].iloc[-1]
+
+# -----------------------------
+# MARKET REGIME LOGIC
+# -----------------------------
+if qqq_up and not vix_up and smh_up:
+    regime = "INCOME MODE"
+elif not qqq_up and vix_up:
+    regime = "DANGER MODE"
+elif not qqq_up:
+    regime = "DEFENCE MODE"
 else:
-    market = "🟡 NEUTRAL — selective trades"
+    regime = "CAUTION MODE"
 
-st.subheader(market)
+# -----------------------------
+# DISPLAY REGIME
+# -----------------------------
+st.subheader("📡 Market Regime Engine")
 
+if regime == "INCOME MODE":
+    st.success("💰 INCOME WINDOW OPEN – Sell CSP + Covered Calls")
+elif regime == "CAUTION MODE":
+    st.warning("🟡 CAUTION – Smaller Size / Selective CSP")
+elif regime == "DEFENCE MODE":
+    st.warning("🔴 DEFENCE – Reduce New Put Selling")
+elif regime == "DANGER MODE":
+    st.error("🚨 DANGER – STOP Selling Puts / Protect Margin")
+
+# -----------------------------
+# LONG PUT INTELLIGENCE
+# -----------------------------
+st.subheader("📉 Long Put Manager")
+
+if vix_level > 22 and vix_up:
+    st.info("HOLD HEDGES – Volatility Rising")
+elif vix_level > 25:
+    st.success("TAKE PARTIAL PROFIT ON PUTS")
+elif qqq_up:
+    st.warning("CLOSE OR REDUCE HEDGES – Market Stabilising")
+else:
+    st.write("Monitor Hedges")
+
+# -----------------------------
+# LEAPS / LONG CALL MANAGER
+# -----------------------------
+st.subheader("📈 LEAPS Manager")
+
+if qqq_up and smh_up:
+    st.success("HOLD LEAPS – Bullish Trend")
+elif not qqq_up and not vix_up:
+    st.warning("Consider Selling Calls Against LEAPS")
+else:
+    st.write("Monitor Momentum")
+
+# -----------------------------
+# MARGIN SAFETY BAR (Manual Input for Now)
+# -----------------------------
+st.subheader("🚨 Margin Risk Status")
+
+excess_liquidity = st.number_input("Enter Current Excess Liquidity", value=15000)
+
+if excess_liquidity > 20000:
+    st.success("SAFE – Continue Strategy")
+elif excess_liquidity > 10000:
+    st.warning("WATCH – Avoid Large New Positions")
+elif excess_liquidity > 5000:
+    st.error("TIGHT – No New CSP")
+else:
+    st.error("CRITICAL – Reduce Risk Immediately")
 # =========================
 # INCOME TRACKER
 # =========================
