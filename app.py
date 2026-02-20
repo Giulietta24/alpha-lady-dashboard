@@ -116,7 +116,9 @@ def get_market_data():
         return None, None, None
 
 qqq, vix, smh = get_market_data()
-
+if qqq is None or vix is None or smh is None:
+    st.warning("Market data loading...")
+    st.stop()
 def trend_up(data):
     if data is None or len(data) < 15:
         return False
@@ -139,7 +141,10 @@ qqq_up = trend_up(qqq)
 vix_up = trend_up(vix)
 smh_up = trend_up(smh)
 
-vix_level = vix["Close"].iloc[-1]
+if vix is None or len(vix) == 0:
+    vix_level = 20
+else:
+    vix_level = float(vix["Close"].iloc[-1])
 
 # -----------------------------
 # MARKET REGIME LOGIC
