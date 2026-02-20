@@ -311,7 +311,7 @@ st.write(regime)
 # =========================
 st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
 
-import random
+
 
 def market_open_check():
     # simple placeholder until full regime engine connected
@@ -339,21 +339,87 @@ call_universe = [
     "NVDA","META","AMZN","MSFT","SMH","MU","AVGO","PANW"
 ]
 
-def generate_setups(universe, bias):
-    setups = []
-    for s in universe:
-        score = random.random()
-        if score > 0.82:   # A+ filter (strict)
-            setups.append({
-                "Ticker": s,
-                "Bias": bias,
-                "Quality": "A+",
-            })
-    return setups
+# =========================
+# REAL DYNAMIC A+ ENGINE
+# =========================
 
-sell_puts = generate_setups(sell_put_universe, "Sell Put")
-long_puts = generate_setups(long_put_universe, "Long Put")
-calls = generate_setups(call_universe, "Long Call")
+st.info("Scanning live market movers...")
+
+def get_movers(endpoint):
+    try:
+        url = f"https://finnhub.io/api/v1/stock/market/list/{endpoint}?token={API_KEY}"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        return data if isinstance(data, list) else []
+    except:
+        return []
+
+# Pull live movers
+gainers = get_movers("gainers")
+losers = get_movers("losers")
+active = get_movers("mostactive")
+
+# Combine and deduplicate
+universe = {}
+
+for group in [gainers, losers, active]:
+    for s in group:
+        ticker = s.get("symbol")
+        move = s.get("changePercent")
+        if ticker and move is not None:
+            universe[ticker] = float(move)
+
+sell_puts = []
+long_puts = []
+calls = []
+
+spy_move = get_price("SPY")
+
+for ticker, move in universe.items():
+
+    # SELL PUT = outperform SPY by >1%
+    if isinstance(spy_move, (int, float)) and move > spy_move + 1.0:
+        sell_puts.append({
+            "Ticker": ticker,
+            "% Move": round(move,2),
+            "Setup": "Sell Put",
+            "Quality": "A+"
+        })
+
+    # LONG PUT = underperform SPY by >1%
+    if isinstance(spy_move, (int, float)) and move < spy_move - 1.0:
+        long_puts.append({
+            "Ticker": ticker,
+            "% Move": round(move,2),
+            "Setup": "Long Put",
+            "Quality": "A+"
+        })
+
+    # CALL MOMENTUM = strong breakout >2%
+    if move > 2.0:
+        calls.append({
+            "Ticker": ticker,
+            "% Move": round(move,2),
+            "Setup": "Long Call",
+            "Quality": "A+"
+        })
+
+# Display results
+
+if not sell_puts and not long_puts and not calls:
+    st.warning("🚫 NO A+ SETUPS — DO NOT TRADE")
+else:
+    if sell_puts:
+        st.subheader("🟢 A+ SELL PUTS")
+        st.dataframe(pd.DataFrame(sell_puts), use_container_width=True)
+
+    if calls:
+        st.subheader("🔵 A+ LONG CALLS")
+        st.dataframe(pd.DataFrame(calls), use_container_width=True)
+
+    if long_puts:
+        st.subheader("🔴 A+ LONG PUTS")
+        st.dataframe(pd.DataFrame(long_puts), use_container_width=True)
 
 # --- OUTPUT TABLES ---
 
