@@ -314,7 +314,6 @@ st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
 # ALPHA ENGINE (Top 200 + ETFs)
 # =========================
 
-import requests
 import numpy as np
 
 @st.cache_data(ttl=3600)
@@ -323,28 +322,9 @@ def get_sp500_top200():
     tickers = table["Symbol"].tolist()
     return tickers[:200]
 
-# Core Universe
 sp500 = get_sp500_top200()
 
 etfs = [
     "XLE","XLK","XLF","XLV","XLI","XLP","XLY","XLRE","XLB","XLC",
     "QQQ","IWM","SPY","TLT","GLD","SLV","USO","SMH","ARKK"
 ]
-
-universe = list(set(sp500 + etfs))
-
-def get_metrics(symbol):
-    try:
-        data = yf.download(symbol, period="7d", progress=False)
-        if len(data) < 6:
-            return None
-        
-        close = data["Close"]
-        day_change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
-        five_day = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6]) * 100
-        
-        return {
-            "symbol": symbol,
-            "day_change": round(day_change,2),
-            "five_day": round(five_day,2)
-        }
