@@ -310,131 +310,41 @@ st.write(regime)
 # ⭐ A+ TRADE SCANNER ENGINE
 # =========================
 st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
-
-
-
-def market_open_check():
-    # simple placeholder until full regime engine connected
-    if "Risk-Off" in regime:
-        return False
-    return True
-
-if not market_open_check():
-    st.error("🚫 Market risk high — NO A+ TRADES")
-else:
-    st.success("Scanning market for A+ setups...")
-
-# --- sample liquid universe (will expand dynamically) ---
-sell_put_universe = [
-    "XOM","SLB","HAL","CVX","CAT","GE","IWM","SPY","QQQ",
-    "MSFT","AMZN","META","NVDA","MU","TSLA","GOOGL"
-]
-
-long_put_universe = [
-    "TSLA","COIN","SHOP","PYPL","RIVN","SNOW","ZM",
-    "ROKU","AFRM","LCID"
-]
-
-call_universe = [
-    "NVDA","META","AMZN","MSFT","SMH","MU","AVGO","PANW"
-]
-
 # =========================
-# REAL DYNAMIC A+ ENGINE
+# ALPHA ENGINE (Top 200 + ETFs)
 # =========================
 
-st.info("Scanning live market movers...")
+import requests
+import numpy as np
 
-def get_movers(endpoint):
+@st.cache_data(ttl=3600)
+def get_sp500_top200():
+    table = pd.read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")[0]
+    tickers = table["Symbol"].tolist()
+    return tickers[:200]
+
+# Core Universe
+sp500 = get_sp500_top200()
+
+etfs = [
+    "XLE","XLK","XLF","XLV","XLI","XLP","XLY","XLRE","XLB","XLC",
+    "QQQ","IWM","SPY","TLT","GLD","SLV","USO","SMH","ARKK"
+]
+
+universe = list(set(sp500 + etfs))
+
+def get_metrics(symbol):
     try:
-        url = f"https://finnhub.io/api/v1/stock/market/list/{endpoint}?token={API_KEY}"
-        r = requests.get(url, timeout=10)
-        data = r.json()
-        return data if isinstance(data, list) else []
-    except:
-        return []
-
-# Pull live movers
-gainers = get_movers("gainers")
-losers = get_movers("losers")
-active = get_movers("mostactive")
-
-# Combine and deduplicate
-universe = {}
-
-for group in [gainers, losers, active]:
-    for s in group:
-        ticker = s.get("symbol")
-        move = s.get("changePercent")
-        if ticker and move is not None:
-            universe[ticker] = float(move)
-
-sell_puts = []
-long_puts = []
-calls = []
-
-spy_move = get_price("SPY")
-
-for ticker, move in universe.items():
-
-    # SELL PUT = outperform SPY by >1%
-    if isinstance(spy_move, (int, float)) and move > spy_move + 1.0:
-        sell_puts.append({
-            "Ticker": ticker,
-            "% Move": round(move,2),
-            "Setup": "Sell Put",
-            "Quality": "A+"
-        })
-
-    # LONG PUT = underperform SPY by >1%
-    if isinstance(spy_move, (int, float)) and move < spy_move - 1.0:
-        long_puts.append({
-            "Ticker": ticker,
-            "% Move": round(move,2),
-            "Setup": "Long Put",
-            "Quality": "A+"
-        })
-
-    # CALL MOMENTUM = strong breakout >2%
-    if move > 2.0:
-        calls.append({
-            "Ticker": ticker,
-            "% Move": round(move,2),
-            "Setup": "Long Call",
-            "Quality": "A+"
-        })
-
-# Display results
-
-if not sell_puts and not long_puts and not calls:
-    st.warning("🚫 NO A+ SETUPS — DO NOT TRADE")
-else:
-    if sell_puts:
-        st.subheader("🟢 A+ SELL PUTS")
-        st.dataframe(pd.DataFrame(sell_puts), use_container_width=True)
-
-    if calls:
-        st.subheader("🔵 A+ LONG CALLS")
-        st.dataframe(pd.DataFrame(calls), use_container_width=True)
-
-    if long_puts:
-        st.subheader("🔴 A+ LONG PUTS")
-        st.dataframe(pd.DataFrame(long_puts), use_container_width=True)
-
-# --- OUTPUT TABLES ---
-
-if not sell_puts and not long_puts and not calls:
-    st.warning("🚫 NO A+ SETUPS RIGHT NOW — DO NOT TRADE")
-else:
-
-    if sell_puts:
-        st.subheader("🟢 A+ SELL PUT SETUPS")
-        st.dataframe(pd.DataFrame(sell_puts), use_container_width=True)
-
-    if calls:
-        st.subheader("🔵 A+ CALL MOMENTUM")
-        st.dataframe(pd.DataFrame(calls), use_container_width=True)
-
-    if long_puts:
-        st.subheader("🔴 A+ LONG PUT SETUPS")
-        st.dataframe(pd.DataFrame(long_puts), use_container_width=True)
+        data = yf.download(symbol, period="7d", progress=False)
+        if len(data) < 6:
+            return None
+        
+        close = data["Close"]
+        day_change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+        five_day = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6]) * 100
+        
+        return {
+            "symbol": symbol,
+            "day_change": round(day_change,2),
+            "five_day": round(five_day,2)
+        }
