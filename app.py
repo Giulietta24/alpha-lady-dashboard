@@ -369,7 +369,17 @@ for ticker in sp500:
 
 # ---- BUILD DYNAMIC TOP 120 ----
 df_all = pd.DataFrame(results)
-df_all = df_all.sort_values("Score", ascending=False).head(120)
+# Ensure Score column exists and is numeric
+if "Score" in df_all.columns:
+    df_all["Score"] = pd.to_numeric(df_all["Score"], errors="coerce")
+    df_all = df_all.dropna(subset=["Score"])
+
+    if not df_all.empty:
+        df_all = df_all.sort_values(by="Score", ascending=False).head(120)
+    else:
+        st.warning("No valid scores calculated yet.")
+else:
+    st.warning("Score column missing.")
 
 # ---- ADD ETFs ----
 etfs = [
