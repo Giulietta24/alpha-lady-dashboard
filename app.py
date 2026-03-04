@@ -311,20 +311,139 @@ st.write(regime)
 # =========================
 st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
 # =========================
-# ALPHA ENGINE (Top 200 + ETFs)
+# FULL DYNAMIC ALPHA ENGINE (FREE)
 # =========================
 
 import numpy as np
 
-@st.cache_data(ttl=3600)
-def get_sp500_top200():
-    table = pd.read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")[0]
-    tickers = table["Symbol"].tolist()
-    return tickers[:200]
+# ---- YOUR CURRENT PORTFOLIO NAMES ----
+portfolio_names = [
+    "SOFI","ZETA","PLTR","HOOD",
+    "GRAB","SBET","SG","BMNR",
+    "QQQ","SPX"
+]
 
-sp500 = get_sp500_top200()
+# ---- LOAD S&P 500 TICKERS (STATIC SAFE LIST FOR STABILITY) ----
+sp500 = pd.read_csv(
+    "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+)["Symbol"].tolist()
 
+# ---- BULK DOWNLOAD LAST 7 DAYS ----
+with st.spinner("Building dynamic universe..."):
+    data = yf.download(sp500, period="7d", group_by="ticker", progress=False)
+
+results = []
+
+spy_data = yf.download("SPY", period="7d", progress=False)
+spy_5d = ((spy_data["Close"].iloc[-1] - spy_data["Close"].iloc[-6]) /
+          spy_data["Close"].iloc[-6]) * 100
+
+for ticker in sp500:
+    try:
+        df = data[ticker].dropna()
+        if len(df) < 6:
+            continue
+
+        close = df["Close"]
+        volume = df["Volume"]
+
+        day_change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+        five_day = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6]) * 100
+        vol_proxy = (close.max() - close.min()) / close.mean() * 100
+        rel_strength = five_day - spy_5d
+
+        score = abs(five_day) + abs(day_change) + vol_proxy + abs(rel_strength)
+
+        results.append({
+            "Ticker": ticker,
+            "1D %": round(day_change,2),
+            "5D %": round(five_day,2),
+            "Rel vs SPY": round(rel_strength,2),
+            "Vol Proxy": round(vol_proxy,2),
+            "Score": round(score,2),
+            "In Portfolio": "YES" if ticker in portfolio_names else "NEW"
+        })
+
+    except:
+        continue
+
+# ---- BUILD DYNAMIC TOP 120 ----
+df_all = pd.DataFrame(results)
+df_all = df_all.sort_values("Score", ascending=False).head(120)
+
+# ---- ADD ETFs ----
 etfs = [
     "XLE","XLK","XLF","XLV","XLI","XLP","XLY","XLRE","XLB","XLC",
     "QQQ","IWM","SPY","TLT","GLD","SLV","USO","SMH","ARKK"
 ]
+
+etf_data = yf.download(etfs, period="7d", group_by="ticker", progress=False)
+
+for ticker in etfs:
+    try:
+        df = etf_data[ticker].dropna()
+        if len(df) < 6:
+            continue
+
+        close = df["Close"]
+        day_change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+        five_day = ((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6]) * 100
+        vol_proxy = (close.max() - close.min()) / close.mean() * 100
+        rel_strength = five_day - spy_5d
+
+        score = abs(five_day) + abs(day_change) + vol_proxy + abs(rel_strength)
+
+        df_all = pd.concat([df_all, pd.DataFrame([{
+            "Ticker": ticker,
+            "1D %": round(day_change,2),
+            "5D %": round(five_day,2),
+            "Rel vs SPY": round(rel_strength,2),
+            "Vol Proxy": round(vol_proxy,2),
+            "Score": round(score,2),
+            "In Portfolio": "YES" if ticker in portfolio_names else "NEW"
+        }])])
+
+    except:
+        continue
+
+# ---- CLASSIFICATIONS ----
+
+# Aggressive Income (5D positive, 1D pullback)
+income = df_all[
+    (df_all["5D %"] > 1) &
+    (df_all["1D %"] < 0)
+].sort_values("Score", ascending=False).head(5)
+
+# Momentum Calls (strong trend)
+calls = df_all[
+    (df_all["5D %"] > 2) &
+    (df_all["1D %"] > 0)
+].sort_values("Score", ascending=False).head(5)
+
+# Breakdown Puts (negative acceleration)
+puts = df_all[
+    (df_all["5D %"] < -2) &
+    (df_all["1D %"] < 0)
+].sort_values("Score", ascending=False).head(5)
+
+top10 = df_all.sort_values("Score", ascending=False).head(10)
+
+# ---- DISPLAY ----
+
+if income.empty and calls.empty and puts.empty:
+    st.warning("🚫 No strong setups right now — market mixed.")
+else:
+    if not income.empty:
+        st.subheader("🟢 Top 5 Aggressive Income (Pullbacks)")
+        st.dataframe(income, use_container_width=True)
+
+    if not calls.empty:
+        st.subheader("🔵 Top 5 Momentum Calls")
+        st.dataframe(calls, use_container_width=True)
+
+    if not puts.empty:
+        st.subheader("🔴 Top 5 Breakdown Puts")
+        st.dataframe(puts, use_container_width=True)
+
+st.subheader("📊 Top 10 Overall Alpha Ranked")
+st.dataframe(top10, use_container_width=True)    
