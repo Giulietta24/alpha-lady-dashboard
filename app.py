@@ -368,7 +368,9 @@ for ticker in sp500:
         continue
 
 # ---- BUILD DYNAMIC TOP 120 ----
-df_all = pd.DataFrame(results)
+df_all = pd.DataFrame(results) 
+st.write("Raw rows collected:", len(df_all))
+
 # Ensure Score column exists and is numeric
 if "Score" in df_all.columns:
     df_all["Score"] = pd.to_numeric(df_all["Score"], errors="coerce")
