@@ -61,8 +61,8 @@ except:
         regime = "🔴 Risk-Off"
     else:
         regime = "🟡 Mixed"
-else:
-    regime = "Loading..."
+    else:
+        regime = "Loading..."
 
 st.write(regime)
 
