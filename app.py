@@ -92,15 +92,63 @@ core_universe = build_dynamic_universe()
 @st.cache_data(ttl=300)
 def scan_universe(tickers):
 
-    data = yf.download(tickers, period="7d", group_by="ticker", progress=False)
-    spy = yf.download("SPY", period="7d", progress=False)
+    results = []
 
-    if spy is None or len(spy) < 6:
+    try:
+        data = yf.download(tickers, period="7d", group_by="ticker", progress=False)
+        spy = yf.download("SPY", period="7d", progress=False)
+
+        if spy is None or len(spy) < 6:
+            return pd.DataFrame()
+
+        spy_5d = (spy["Close"].iloc[-1] - spy["Close"].iloc[-6]) / spy["Close"].iloc[-6] * 100
+
+    except:
         return pd.DataFrame()
 
-    spy_5d = (spy["Close"].iloc[-1] - spy["Close"].iloc[-6]) / spy["Close"].iloc[-6] * 100
+    for ticker in tickers:
 
-    results = []
+        try:
+            df = data[ticker].dropna()
+            if len(df) < 6:
+                continue
+
+            close = df["Close"]
+
+            day = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
+            five = (close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100
+            rel = five - spy_5d
+
+            range_pct = (close.max() - close.min()) / close.mean() * 100
+
+            trend_score = max(five, 0) * 1.5
+            relative_score = max(rel, 0) * 1.2
+
+            pullback_score = 0
+            if -4 <= day <= -0.5:
+                pullback_score = abs(day) * 1.3
+
+            vol_score = range_pct * 0.8
+
+            collapse_penalty = 0
+            if day < -5 or five < -3:
+                collapse_penalty = 10
+
+            premium_score = trend_score + relative_score + pullback_score + vol_score - collapse_penalty
+
+            results.append({
+                "Ticker": ticker,
+                "1D %": round(day,2),
+                "5D %": round(five,2),
+                "Rel vs SPY": round(rel,2),
+                "Range %": round(range_pct,2),
+                "Premium Score": round(premium_score,2)
+            })
+
+        except:
+            continue
+
+    return pd.DataFrame(results)
 
     for ticker in tickers:
         try:
