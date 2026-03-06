@@ -113,15 +113,49 @@ def scan_universe(tickers):
             rel = five - spy_5d
             vol = (close.max() - close.min()) / close.mean() * 100
 
-            score = abs(five) + abs(day) + abs(rel) + vol
+            close = df["Close"]
 
-            results.append({
-                "Ticker": ticker,
-                "1D %": round(day,2),
-                "5D %": round(five,2),
-                "Rel vs SPY": round(rel,2),
-                "Score": round(score,2)
-            })
+# Price changes
+day = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
+five = (close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100
+rel = five - spy_5d
+
+# Volatility proxy
+range_pct = (close.max() - close.min()) / close.mean() * 100
+
+# -------------------------------
+# PREMIUM SUITABILITY SCORING
+# -------------------------------
+
+# 1️⃣ Trend strength score
+trend_score = max(five, 0) * 1.5
+
+# 2️⃣ Relative strength score
+relative_score = max(rel, 0) * 1.2
+
+# 3️⃣ Pullback quality (A + B zone)
+pullback_score = 0
+if -4 <= day <= -0.5:
+    pullback_score = abs(day) * 1.3
+
+# 4️⃣ Volatility premium proxy
+vol_score = range_pct * 0.8
+
+# 5️⃣ Downside penalty (avoid collapses)
+collapse_penalty = 0
+if day < -5 or five < -3:
+    collapse_penalty = 10
+
+premium_score = trend_score + relative_score + pullback_score + vol_score - collapse_penalty
+
+results.append({
+    "Ticker": ticker,
+    "1D %": round(day,2),
+    "5D %": round(five,2),
+    "Rel vs SPY": round(rel,2),
+    "Range %": round(range_pct,2),
+    "Premium Score": round(premium_score,2)
+})
 
         except:
             continue
@@ -137,7 +171,7 @@ if df_scan is not None and not df_scan.empty and "Score" in df_scan.columns:
 
     if not df_scan.empty:
 
-        df_scan = df_scan.sort_values(by="Score", ascending=False)
+        df_scan = df_scan.sort_values(by="Premium Score", ascending=False)
 
         income = df_scan[(df_scan["5D %"] > 1) & (df_scan["1D %"] < 0)].head(5)
         calls = df_scan[(df_scan["5D %"] > 2) & (df_scan["1D %"] > 0)].head(5)
