@@ -145,8 +145,8 @@ def scan_universe(tickers):
                 "Premium Score": round(premium_score,2)
             })
 
-        except:
-            continue
+    except:
+                continue
 
     return pd.DataFrame(results)
 
