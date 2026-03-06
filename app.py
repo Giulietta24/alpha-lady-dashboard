@@ -34,9 +34,26 @@ def get_regime_data():
 
 spy, vix = get_regime_data()
 
-if len(spy) > 1 and len(vix) > 1:
-    spy_change = (spy["Close"].iloc[-1] - spy["Close"].iloc[-2]) / spy["Close"].iloc[-2] * 100
-    vix_change = (vix["Close"].iloc[-1] - vix["Close"].iloc[-2]) / vix["Close"].iloc[-2] * 100
+try:
+    if spy is not None and vix is not None and len(spy) > 2 and len(vix) > 2:
+
+        spy_close = spy["Close"]
+        vix_close = vix["Close"]
+
+        spy_change = float((spy_close.iloc[-1] - spy_close.iloc[-2]) / spy_close.iloc[-2] * 100)
+        vix_change = float((vix_close.iloc[-1] - vix_close.iloc[-2]) / vix_close.iloc[-2] * 100)
+
+        if spy_change > 0.3 and vix_change < 0:
+            regime = "🟢 Risk-On"
+        elif spy_change < -0.3 and vix_change > 0:
+            regime = "🔴 Risk-Off"
+        else:
+            regime = "🟡 Mixed"
+    else:
+        regime = "Loading..."
+
+except:
+    regime = "Loading..."
 
     if spy_change > 0.3 and vix_change < 0:
         regime = "🟢 Risk-On"
