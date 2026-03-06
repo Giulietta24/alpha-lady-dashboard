@@ -3,7 +3,6 @@ import yfinance as yf
 import pandas as pd
 import requests
 import numpy as np
-import time
 
 st.set_page_config(page_title="Alpha Lady Pro", layout="wide")
 st.title("💎 Alpha Lady — Pro Trading Cockpit")
@@ -22,7 +21,7 @@ with col3:
     cash = st.number_input("Cash Available ($)", value=0)
 
 # =====================================================
-# MARKET REGIME (LIGHTWEIGHT + STABLE)
+# MARKET REGIME
 # =====================================================
 st.subheader("📡 Market Regime Engine")
 
@@ -34,9 +33,10 @@ def get_regime_data():
 
 spy, vix = get_regime_data()
 
-try:
-    if spy is not None and vix is not None and len(spy) > 2 and len(vix) > 2:
+regime = "Loading..."
 
+if spy is not None and vix is not None and len(spy) > 2 and len(vix) > 2:
+    try:
         spy_close = spy["Close"]
         vix_close = vix["Close"]
 
@@ -49,81 +49,16 @@ try:
             regime = "🔴 Risk-Off"
         else:
             regime = "🟡 Mixed"
-    else:
-        regime = "Loading..."
-
-except:
-    regime = "Loading..."
-
-    if spy_change > 0.3 and vix_change < 0:
-        regime = "🟢 Risk-On"
-    elif spy_change < -0.3 and vix_change > 0:
-        regime = "🔴 Risk-Off"
-    else:
-        regime = "🟡 Mixed"
-    else:
+    except:
         regime = "Loading..."
 
 st.write(regime)
 
 # =====================================================
-# THEME MOVES (FINNHUB LIGHTWEIGHT)
-# =====================================================
-st.header("Live Market Intelligence")
-
-API_KEY = "PUT_YOUR_FINNHUB_KEY_HERE"
-
-def get_price(symbol):
-    try:
-        url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={API_KEY}"
-        r = requests.get(url, timeout=10)
-        data = r.json()
-        if "dp" in data and data["dp"] is not None:
-            return round(data["dp"], 2)
-        return None
-    except:
-        return None
-
-themes = {
-    "S&P 500": "SPY",
-    "Nasdaq": "QQQ",
-    "Small Caps": "IWM",
-    "Semis": "SMH",
-    "Financials": "XLF",
-    "Energy": "XLE",
-    "Healthcare": "XLV",
-    "REITs": "XLRE",
-    "Discretionary": "XLY",
-    "Staples": "XLP",
-    "Industrials": "XLI",
-    "Materials": "XLB"
-}
-
-rows = []
-for name, ticker in themes.items():
-    move = get_price(ticker)
-    if move is not None:
-        rows.append((name, move))
-
-df = pd.DataFrame(rows, columns=["Theme", "% Move Today"])
-
-if not df.empty:
-    df = df.sort_values("% Move Today", ascending=False)
-
-    st.subheader("Strongest Themes")
-    st.dataframe(df.head(6), use_container_width=True)
-
-    st.subheader("Weakest Themes")
-    st.dataframe(df.tail(6), use_container_width=True)
-else:
-    st.warning("Theme data loading...")
-
-# =====================================================
-# ⭐ DYNAMIC A+ SCANNER (STABLE CORE UNIVERSE)
+# ⭐ A+ SCANNER
 # =====================================================
 st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
 
-# Stable dynamic universe (liquid leaders + ETFs)
 core_universe = [
     "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
     "AMD","AVGO","JPM","XOM","LLY","UNH","BRK-B",
@@ -134,6 +69,9 @@ core_universe = [
 def scan_universe(tickers):
     data = yf.download(tickers, period="7d", group_by="ticker", progress=False)
     spy = yf.download("SPY", period="7d", progress=False)
+
+    if spy is None or len(spy) < 6:
+        return pd.DataFrame()
 
     spy_5d = (spy["Close"].iloc[-1] - spy["Close"].iloc[-6]) / spy["Close"].iloc[-6] * 100
 
@@ -174,30 +112,30 @@ if df_scan is not None and not df_scan.empty and "Score" in df_scan.columns:
     df_scan = df_scan.dropna(subset=["Score"])
 
     if not df_scan.empty:
+
         df_scan = df_scan.sort_values(by="Score", ascending=False)
+
+        income = df_scan[(df_scan["5D %"] > 1) & (df_scan["1D %"] < 0)].head(5)
+        calls = df_scan[(df_scan["5D %"] > 2) & (df_scan["1D %"] > 0)].head(5)
+        puts = df_scan[(df_scan["5D %"] < -2) & (df_scan["1D %"] < 0)].head(5)
+
+        if not income.empty:
+            st.subheader("🟢 Pullback Income Candidates")
+            st.dataframe(income, use_container_width=True)
+
+        if not calls.empty:
+            st.subheader("🔵 Momentum Call Candidates")
+            st.dataframe(calls, use_container_width=True)
+
+        if not puts.empty:
+            st.subheader("🔴 Breakdown Put Candidates")
+            st.dataframe(puts, use_container_width=True)
+
+        st.subheader("📊 Top 10 Ranked Overall")
+        st.dataframe(df_scan.head(10), use_container_width=True)
+
     else:
         st.warning("No valid scan results yet.")
-else:
-    st.warning("Scanner data not ready.")
-
-    income = df_scan[(df_scan["5D %"] > 1) & (df_scan["1D %"] < 0)].head(5)
-    calls = df_scan[(df_scan["5D %"] > 2) & (df_scan["1D %"] > 0)].head(5)
-    puts = df_scan[(df_scan["5D %"] < -2) & (df_scan["1D %"] < 0)].head(5)
-
-    if not income.empty:
-        st.subheader("🟢 Pullback Income Candidates")
-        st.dataframe(income, use_container_width=True)
-
-    if not calls.empty:
-        st.subheader("🔵 Momentum Call Candidates")
-        st.dataframe(calls, use_container_width=True)
-
-    if not puts.empty:
-        st.subheader("🔴 Breakdown Put Candidates")
-        st.dataframe(puts, use_container_width=True)
-
-    st.subheader("📊 Top 10 Ranked Overall")
-    st.dataframe(df_scan.head(10), use_container_width=True)
 
 else:
     st.warning("Scanner loading...")
