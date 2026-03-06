@@ -168,8 +168,17 @@ def scan_universe(tickers):
 
 df_scan = scan_universe(core_universe)
 
-if not df_scan.empty:
-    df_scan = df_scan.sort_values("Score", ascending=False)
+if df_scan is not None and not df_scan.empty and "Score" in df_scan.columns:
+
+    df_scan["Score"] = pd.to_numeric(df_scan["Score"], errors="coerce")
+    df_scan = df_scan.dropna(subset=["Score"])
+
+    if not df_scan.empty:
+        df_scan = df_scan.sort_values(by="Score", ascending=False)
+    else:
+        st.warning("No valid scan results yet.")
+else:
+    st.warning("Scanner data not ready.")
 
     income = df_scan[(df_scan["5D %"] > 1) & (df_scan["1D %"] < 0)].head(5)
     calls = df_scan[(df_scan["5D %"] > 2) & (df_scan["1D %"] > 0)].head(5)
