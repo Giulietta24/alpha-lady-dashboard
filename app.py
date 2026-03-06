@@ -59,11 +59,35 @@ st.write(regime)
 # =====================================================
 st.header("⭐ A+ Trade Scanner (Balanced Income + Growth)")
 
-core_universe = [
-    "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
-    "AMD","AVGO","JPM","XOM","LLY","UNH","BRK-B",
-    "PLTR","SOFI","HOOD","ZETA","SMH","QQQ","SPY","IWM"
-]
+# =====================================================
+# BUILD TRUE DYNAMIC UNIVERSE (TOP + BOTTOM MOVERS)
+# =====================================================
+
+@st.cache_data(ttl=300)
+def build_dynamic_universe():
+
+    # Load S&P 500 symbols
+    sp500 = pd.read_csv(
+        "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+    )["Symbol"].tolist()
+
+    # Download 2 days of data
+    data = yf.download(sp500, period="2d", progress=False)["Close"]
+
+    # Calculate daily % change
+    pct = (data.iloc[-1] - data.iloc[-2]) / data.iloc[-2] * 100
+    pct = pct.dropna().sort_values(ascending=False)
+
+    # Select strongest + weakest
+    top_movers = pct.head(60).index.tolist()
+    bottom_movers = pct.tail(40).index.tolist()
+
+    dynamic_universe = list(set(top_movers + bottom_movers))
+
+    return dynamic_universe
+
+
+core_universe = build_dynamic_universe()
 
 @st.cache_data(ttl=300)
 def scan_universe(tickers):
