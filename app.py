@@ -35,8 +35,9 @@ def get_regime():
     if len(spy) < 2 or len(vix) < 2:
         return "Loading..."
 
-    spy_change = (spy["Close"].iloc[-1] - spy["Close"].iloc[-2]) / spy["Close"].iloc[-2] * 100
-    vix_change = (vix["Close"].iloc[-1] - vix["Close"].iloc[-2]) / vix["Close"].iloc[-2] * 100
+   spy_change = float((spy["Close"].iloc[-1] - spy["Close"].iloc[-2]) / spy["Close"].iloc[-2] * 100)
+   vix_change = float((vix["Close"].iloc[-1] - vix["Close"].iloc[-2]) / vix["Close"].iloc[-2] * 100)
+
 
     if spy_change > 0.3 and vix_change < 0:
         return "🟢 Risk-On"
