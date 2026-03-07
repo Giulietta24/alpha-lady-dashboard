@@ -13,11 +13,11 @@ st.header("Account Overview")
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    net_liq = st.number_input("Net Liquidation ($)", value=49000)
+    net_liq = st.number_input("Net Liquidation ($)", value=50000)
 with col2:
-    excess_liq = st.number_input("Excess Liquidity ($)", value=26000)
+    excess_liq = st.number_input("Excess Liquidity ($)", value=31000)
 with col3:
-    cash = st.number_input("Cash Available ($)", value=0)
+    cash = st.number_input("Cash Available ($)", value=40000)
 
 # =====================================================
 # MARKET REGIME ENGINE
